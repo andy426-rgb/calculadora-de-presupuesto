@@ -660,4 +660,22 @@ function escapeHTML(str) {
 }
 
 // Iniciar al cargar
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  registerServiceWorker();
+});
+
+// Registrar Service Worker para PWA (instalable en móvil/escritorio)
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => {
+          console.log('PWA Service Worker registrado con éxito:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('Error al registrar Service Worker:', err);
+        });
+    });
+  }
+}
