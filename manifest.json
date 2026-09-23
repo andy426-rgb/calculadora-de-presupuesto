@@ -1,7 +1,7 @@
 {
-  "name": "Calculadora Financiera Personal",
-  "short_name": "FinanzasPro",
-  "description": "Calculadora de presupuesto inteligente con fórmulas 50/30/20, fondo de emergencia y tipo de cambio en tiempo real.",
+  "name": "Mi Presupuesto - Planificación Financiera Personal",
+  "short_name": "MiPresupuesto",
+  "description": "Calculadora y presupuestador financiero con la metodología de Finanzas para Todos (CNMV / Banco de España). Gastos fijos, variables y discrecionales.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0b0f19",

@@ -3,24 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculadora de Presupuesto Personal & Fórmulas Financieras</title>
-  <meta name="description" content="Calcula tus ingresos, gastos mensuales, sobrante y evalúa tu salud financiera con la regla 50/30/20 y tasa de ahorro.">
+  <title>Mi Presupuesto | Herramienta de Planificación Financiera Personal</title>
+  <meta name="description" content="Organiza y controla tus ingresos y gastos fijos obligatorios, variables necesarios y discrecionales según la metodología de Finanzas para Todos (CNMV / Banco de España).">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <!-- PWA & Mobile Web App Meta Tags -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0b0f19">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="FinanzasPro">
+  <meta name="apple-mobile-web-app-title" content="Mi Presupuesto">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
 
   <link rel="stylesheet" href="styles.css">
-  <!-- Chart.js para visualización de métricas -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app-background">
@@ -33,17 +33,34 @@
     <header class="app-header">
       <div class="brand">
         <div class="brand-icon">
-          <i class="fa-solid fa-wallet"></i>
+          <i class="fa-solid fa-scale-balanced"></i>
         </div>
         <div>
-          <h1>Calculadora Financiera Personal</h1>
-          <p class="subtitle">Calculadora Financiera Inteligente & Control de Gastos</p>
+          <div class="brand-badge-group">
+            <h1>Mi Presupuesto</h1>
+            <span class="fpt-tag" title="Basado en la metodología del Plan de Educación Financiera (CNMV / Banco de España)">
+              <i class="fa-solid fa-landmark"></i> Modelo Finanzas para Todos
+            </span>
+          </div>
+          <p class="subtitle">Control y planificación de ingresos, gastos obligatorios, variables y discrecionales</p>
         </div>
       </div>
+
       <div class="header-actions">
+        <!-- Selector de Período de Visualización (Mensual vs Anual) -->
+        <div class="view-period-selector" role="group" aria-label="Período de cálculo">
+          <button type="button" id="btnPeriodMonthly" class="btn-period active" data-period="monthly">
+            <i class="fa-regular fa-calendar"></i> Mensual
+          </button>
+          <button type="button" id="btnPeriodAnnual" class="btn-period" data-period="annual">
+            <i class="fa-solid fa-calendar-days"></i> Anual
+          </button>
+        </div>
+
+        <!-- Tipo de Cambio y Moneda -->
         <div class="exchange-rate-box">
           <label for="exchangeRateInput" class="exchange-label" title="1 USD = X Soles">
-            <i class="fa-solid fa-arrow-right-arrow-left"></i> Tipo de Cambio:
+            <i class="fa-solid fa-arrow-right-arrow-left"></i> T/C:
           </label>
           <div class="exchange-input-wrap">
             <span class="tc-prefix">S/</span>
@@ -52,292 +69,746 @@
               <i class="fa-solid fa-rotate"></i>
             </button>
           </div>
-          <span id="apiRateBadge" class="api-status-badge" title="Tasa obtenida en tiempo real">API en vivo</span>
+          <span id="apiRateBadge" class="api-status-badge" title="Tasa obtenida en tiempo real">En vivo</span>
         </div>
 
         <div class="currency-selector-box">
-          <label for="currencySelect" class="currency-label"><i class="fa-solid fa-coins"></i> Ver en:</label>
-          <select id="currencySelect" class="currency-dropdown">
+          <label for="currencySelect" class="currency-label"><i class="fa-solid fa-coins"></i></label>
+          <select id="currencySelect" class="currency-dropdown" aria-label="Moneda">
             <option value="PEN" selected>Soles (S/)</option>
             <option value="USD">Dólares ($)</option>
           </select>
         </div>
 
-        <button id="btnResetAll" class="btn-secondary" title="Reiniciar datos">
-          <i class="fa-solid fa-rotate-left"></i> Restablecer
+        <!-- Acciones rápidas: Plantilla, Imprimir, Reset -->
+        <button id="btnLoadTemplate" class="btn-secondary" title="Cargar presupuesto de ejemplo según Finanzas para Todos">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Ejemplo
+        </button>
+
+        <button id="btnPrintReport" class="btn-action-primary" title="Imprimir informe o guardar en PDF">
+          <i class="fa-solid fa-print"></i> Imprimir
+        </button>
+
+        <button id="btnResetAll" class="btn-secondary" title="Reiniciar todos los datos">
+          <i class="fa-solid fa-rotate-left"></i>
         </button>
       </div>
     </header>
 
-    <!-- Tarjetas de Resumen Financiero Clave -->
-    <section class="summary-grid">
-      <div class="metric-card income-card">
-        <div class="metric-icon"><i class="fa-solid fa-arrow-down-long"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Ingresos Totales</span>
-          <h2 id="dispTotalIncome" class="metric-value">S/ 0.00</h2>
-          <small id="subDispIncome" class="metric-converted-sub">≈ $0.00 USD</small>
-        </div>
-      </div>
+    <!-- Pestañas de Navegación de la Aplicación -->
+    <nav class="app-tabs-nav" aria-label="Navegación principal">
+      <button type="button" class="app-tab-btn active" id="tabBtnBudget" data-tab="budget">
+        <i class="fa-solid fa-wallet"></i> Presupuesto (Finanzas para Todos)
+      </button>
+      <button type="button" class="app-tab-btn" id="tabBtnCompound" data-tab="compound">
+        <i class="fa-solid fa-chart-line"></i> Calculadora de Interés Compuesto
+        <span class="tab-highlight-badge">Nuevo</span>
+      </button>
+    </nav>
 
-      <div class="metric-card expense-card">
-        <div class="metric-icon"><i class="fa-solid fa-arrow-up-long"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Gastos Totales</span>
-          <h2 id="dispTotalExpense" class="metric-value">S/ 0.00</h2>
-          <small id="subDispExpense" class="metric-converted-sub">≈ $0.00 USD</small>
-        </div>
-      </div>
-
-      <div class="metric-card balance-card" id="cardBalance">
-        <div class="metric-icon"><i class="fa-solid fa-scale-balanced"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Remanente Final</span>
-          <h2 id="dispRemainingBalance" class="metric-value">S/ 0.00</h2>
-          <small id="subDispBalance" class="metric-converted-sub">≈ $0.00 USD</small>
-          <span id="badgeBalanceStatus" class="status-pill status-neutral">Sin datos</span>
-        </div>
-      </div>
-
-      <div class="metric-card emergency-card" id="cardEmergency">
-        <div class="metric-icon"><i class="fa-solid fa-shield-heart"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Fondo de Emergencia (<span id="dispEmergencyPctLabel">10%</span>)</span>
-          <h2 id="dispEmergencyAmount" class="metric-value">S/ 0.00</h2>
-          <small id="subDispEmergency" class="metric-converted-sub">≈ $0.00 USD</small>
-        </div>
-      </div>
-
-      <div class="metric-card savings-card">
-        <div class="metric-icon"><i class="fa-solid fa-piggy-bank"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Ahorro Libre / Inversión</span>
-          <h2 id="dispFreeSavingsAmount" class="metric-value">S/ 0.00</h2>
-          <small id="dispSavingsRate" class="metric-hint">0% de tus ingresos</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- Contenido Principal: Dos Columnas -->
-    <div class="main-layout">
-      <!-- Columna Izquierda: Entradas (Ingresos y Gastos) -->
-      <section class="panel input-section">
-        <!-- 1. Configuración de Ingresos y Fondo de Emergencia -->
-        <div class="card-box">
-          <div class="card-box-header">
-            <h3><i class="fa-solid fa-money-bill-wave"></i> Ingresos & Fondo de Emergencia</h3>
-          </div>
-          <div class="form-group">
-            <label for="monthlyIncome">¿Cuánto ganas mensualmente (neto)?</label>
-            <div class="input-currency-wrapper">
-              <span class="currency-symbol dynamic-curr-symbol">S/</span>
-              <input type="number" id="monthlyIncome" placeholder="Ej. 2500" min="0" step="any">
-            </div>
-            <small class="helper-text">Tu sueldo neto o ingresos periódicos libres de descuentos.</small>
-          </div>
-
-          <div class="form-group" style="margin-top: 1.25rem;">
-            <div class="emergency-slider-header">
-              <label for="emergencyRate" class="emergency-label">
-                <i class="fa-solid fa-shield-heart" style="color: #ec4899;"></i> Destinar a Fondo de Emergencia:
-              </label>
-              <span id="emergencyPctVal" class="emergency-badge">10%</span>
-            </div>
-            <div class="range-wrapper">
-              <input type="range" id="emergencyRate" min="0" max="30" value="10" step="1" class="slider-input">
-            </div>
-            <div class="emergency-calculated-hint">
-              <span>Se apartará: <strong id="txtEmergencyApartado">S/ 0.00</strong> mensualmente</span>
-              <small class="helper-text">Fórmula: Ingresos × % Emergencia (Recomendado: 10% - 15% para cubrir imprevistos).</small>
-            </div>
+    <!-- CONTENEDOR VISTA 1: MI PRESUPUESTO -->
+    <div id="tabContentBudget" class="tab-view-content active">
+      <!-- Tarjetas de Resumen Financiero Clave (Metodología Mi Presupuesto) -->
+      <section class="summary-grid">
+        <!-- 1. Total Ingresos -->
+        <div class="metric-card income-card">
+          <div class="metric-icon"><i class="fa-solid fa-arrow-down-long"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Ingresos Totales (<span class="period-text-label">Mensuales</span>)</span>
+            <h2 id="dispTotalIncome" class="metric-value">S/ 0.00</h2>
+            <small id="subDispIncome" class="metric-converted-sub">≈ $0.00 USD</small>
           </div>
         </div>
 
-        <!-- 2. Formulario Agregar Gastos -->
-        <div class="card-box">
-          <div class="card-box-header">
-            <h3><i class="fa-solid fa-cart-plus"></i> Registrar Nuevo Gasto</h3>
+        <!-- 2. Total Gastos -->
+        <div class="metric-card expense-card">
+          <div class="metric-icon"><i class="fa-solid fa-arrow-up-long"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Gastos Totales (<span class="period-text-label">Mensuales</span>)</span>
+            <h2 id="dispTotalExpense" class="metric-value">S/ 0.00</h2>
+            <small id="subDispExpense" class="metric-converted-sub">≈ $0.00 USD</small>
           </div>
-          <form id="expenseForm" class="expense-form">
-            <div class="form-group">
-              <label for="expenseName">Concepto / Nombre del gasto</label>
-              <input type="text" id="expenseName" placeholder="Ej. Alquiler, Supermercado, Netflix..." required>
+        </div>
+
+        <!-- 3. Saldo / Remanente Final -->
+        <div class="metric-card balance-card" id="cardBalance">
+          <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Remanente / Saldo Neto</span>
+            <h2 id="dispRemainingBalance" class="metric-value">S/ 0.00</h2>
+            <small id="subDispBalance" class="metric-converted-sub">≈ $0.00 USD</small>
+            <span id="badgeBalanceStatus" class="status-pill status-neutral">Sin datos</span>
+          </div>
+        </div>
+
+        <!-- 4. Capacidad de Ahorro / Tasa -->
+        <div class="metric-card savings-card">
+          <div class="metric-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Capacidad de Ahorro</span>
+            <h2 id="dispSavingsRateValue" class="metric-value">0.0%</h2>
+            <small id="dispSavingsRate" class="metric-hint">De tus ingresos totales</small>
+          </div>
+        </div>
+
+        <!-- 5. Fondo de Emergencia -->
+        <div class="metric-card emergency-card" id="cardEmergency">
+          <div class="metric-icon"><i class="fa-solid fa-shield-heart"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Fondo Emergencia (<span id="dispEmergencyPctLabel">10%</span>)</span>
+            <h2 id="dispEmergencyAmount" class="metric-value">S/ 0.00</h2>
+            <small id="subDispEmergency" class="metric-converted-sub">≈ $0.00 USD</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resumen de los 3 Pilares Oficiales de Gastos -->
+      <section class="fpt-categories-overview">
+        <div class="fpt-category-chip fpt-chip-fixed">
+          <div class="fpt-chip-icon"><i class="fa-solid fa-lock"></i></div>
+          <div class="fpt-chip-info">
+            <div class="fpt-chip-title">Gastos Fijos Obligatorios</div>
+            <div class="fpt-chip-val" id="dispSumFixed">S/ 0.00</div>
+          </div>
+          <span class="fpt-chip-pct" id="pctSumFixed" title="% de tus ingresos comprometidos">0%</span>
+        </div>
+
+        <div class="fpt-category-chip fpt-chip-variable">
+          <div class="fpt-chip-icon"><i class="fa-solid fa-bolt"></i></div>
+          <div class="fpt-chip-info">
+            <div class="fpt-chip-title">Gastos Variables Necesarios</div>
+            <div class="fpt-chip-val" id="dispSumVariable">S/ 0.00</div>
+          </div>
+          <span class="fpt-chip-pct" id="pctSumVariable" title="% de tus ingresos">0%</span>
+        </div>
+
+        <div class="fpt-category-chip fpt-chip-discretionary">
+          <div class="fpt-chip-icon"><i class="fa-solid fa-umbrella-beach"></i></div>
+          <div class="fpt-chip-info">
+            <div class="fpt-chip-title">Gastos Discrecionales (Opcionales)</div>
+            <div class="fpt-chip-val" id="dispSumDiscretionary">S/ 0.00</div>
+          </div>
+          <span class="fpt-chip-pct" id="pctSumDiscretionary" title="% de tus ingresos">0%</span>
+        </div>
+      </section>
+
+      <!-- Contenido Principal: Dos Columnas -->
+      <div class="main-layout">
+        <!-- Columna Izquierda: Entradas (Ingresos y Gastos con periodicidad) -->
+        <section class="panel input-section">
+
+          <!-- 1. GESTIÓN DE INGRESOS (Múltiples fuentes y frecuencias) -->
+          <div class="card-box" id="secIncomes">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-money-bill-trend-up"></i> Tus Ingresos (<span id="incomesCount">0</span>)</h3>
+                <p class="box-desc">Registra tus nóminas, subsidios, pagas extras o rentas con su frecuencia real.</p>
+              </div>
+              <button type="button" class="btn-toggle-form" id="btnToggleIncomeForm" title="Registrar nuevo ingreso">
+                <i class="fa-solid fa-plus"></i> Añadir Ingreso
+              </button>
             </div>
 
-            <div class="form-row">
+            <!-- Formulario Agregar Ingreso (Colapsable) -->
+            <form id="incomeForm" class="inline-add-form" style="display: none;">
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label for="incomeName">Concepto del Ingreso</label>
+                  <input type="text" id="incomeName" placeholder="Ej. Nómina principal, Paga extra, Pensión..." required>
+                </div>
+                <div class="form-group">
+                  <label for="incomeAmount">Importe (<span class="dynamic-curr-symbol">S/</span>)</label>
+                  <div class="input-currency-wrapper">
+                    <span class="currency-symbol dynamic-curr-symbol">S/</span>
+                    <input type="number" id="incomeAmount" placeholder="Ej. 2500" min="0.01" step="any" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="incomeFrequency">Frecuencia</label>
+                  <select id="incomeFrequency" required>
+                    <option value="monthly" selected>Mensual (12/año)</option>
+                    <option value="weekly">Semanal (52/año)</option>
+                    <option value="biweekly">Quincenal (24/año)</option>
+                    <option value="bimonthly">Bimensual (6/año)</option>
+                    <option value="quarterly">Trimestral (4/año)</option>
+                    <option value="semiannual">Semestral (2/año)</option>
+                    <option value="annual">Anual (1/año)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions-row">
+                <button type="submit" class="btn-primary-sm">
+                  <i class="fa-solid fa-check"></i> Guardar Ingreso
+                </button>
+                <button type="button" class="btn-secondary-sm" id="btnCancelIncome">Cancelar</button>
+              </div>
+            </form>
+
+            <!-- Lista de Ingresos Registrados -->
+            <div id="incomesListContainer" class="items-list mini-list">
+              <!-- Renderizado dinámico -->
+            </div>
+
+            <!-- Slider Fondo de Emergencia -->
+            <div class="emergency-setting-box">
+              <div class="emergency-slider-header">
+                <label for="emergencyRate" class="emergency-label">
+                  <i class="fa-solid fa-shield-heart" style="color: #ec4899;"></i> Reserva para Fondo de Emergencia:
+                </label>
+                <span id="emergencyPctVal" class="emergency-badge">10%</span>
+              </div>
+              <div class="range-wrapper">
+                <input type="range" id="emergencyRate" min="0" max="30" value="10" step="1" class="slider-input">
+              </div>
+              <div class="emergency-calculated-hint">
+                <span>Se reservará: <strong id="txtEmergencyApartado">S/ 0.00</strong> (<span class="period-text-label">Mensual</span>)</span>
+                <small class="helper-text">Recomendación Finanzas para Todos: acumular un colchón equivalente a entre 3 y 6 meses de gastos fijos.</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. FORMULARIO REGISTRAR GASTO (Clasificación Oficial Finanzas Para Todos) -->
+          <div class="card-box" id="secExpenseForm">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-cart-plus"></i> Registrar Gasto</h3>
+              <p class="box-desc">Clasifica cada gasto según su grado de compromiso y periodicidad.</p>
+            </div>
+
+            <form id="expenseForm" class="expense-form">
+              <!-- Tipo de Gasto Oficial Finanzas Para Todos -->
               <div class="form-group">
-                <label for="expenseAmount">Monto (<span class="dynamic-curr-symbol">S/</span>)</label>
-                <div class="input-currency-wrapper">
-                  <span class="currency-symbol dynamic-curr-symbol">S/</span>
-                  <input type="number" id="expenseAmount" placeholder="Ej. 450" min="0.01" step="any" required>
+                <label class="label-heading">Clasificación del Gasto (Metodología Oficial):</label>
+                <div class="fpt-type-radios">
+                  <!-- Fijo Obligatorio -->
+                  <label class="fpt-radio-card fpt-radio-fixed">
+                    <input type="radio" name="expenseFptType" value="fixed_obligatory" checked>
+                    <div class="fpt-radio-body">
+                      <div class="fpt-radio-head">
+                        <span class="fpt-indicator-dot dot-fixed"></span>
+                        <strong>Fijo Obligatorio</strong>
+                      </div>
+                      <span class="fpt-radio-sub">No se pueden dejar de pagar ni negociar fácilmente (hipoteca, alquiler, préstamos, seguros, impuestos, colegio).</span>
+                    </div>
+                  </label>
+
+                  <!-- Variable Necesario -->
+                  <label class="fpt-radio-card fpt-radio-variable">
+                    <input type="radio" name="expenseFptType" value="variable_necessary">
+                    <div class="fpt-radio-body">
+                      <div class="fpt-radio-head">
+                        <span class="fpt-indicator-dot dot-var"></span>
+                        <strong>Variable Necesario</strong>
+                      </div>
+                      <span class="fpt-radio-sub">Indispensables para el día a día, pero su importe puede reducirse con buenos hábitos (comida, luz, agua, gas, transporte).</span>
+                    </div>
+                  </label>
+
+                  <!-- Discrecional -->
+                  <label class="fpt-radio-card fpt-radio-discretionary">
+                    <input type="radio" name="expenseFptType" value="discretionary">
+                    <div class="fpt-radio-body">
+                      <div class="fpt-radio-head">
+                        <span class="fpt-indicator-dot dot-disc"></span>
+                        <strong>Discrecional</strong>
+                      </div>
+                      <span class="fpt-radio-sub">Gastos prescindibles o de estilo de vida; son los primeros a eliminar en caso de apuro (ocio, salidas, viajes, compras).</span>
+                    </div>
+                  </label>
                 </div>
               </div>
 
-              <div class="form-group">
-                <label for="expenseCategory">Categoría</label>
-                <select id="expenseCategory" required>
-                  <option value="Vivienda">🏠 Vivienda / Arriendo</option>
-                  <option value="Alimentación">🛒 Alimentación / Supermercado</option>
-                  <option value="Servicios">💡 Servicios Básicos (Luz, Agua, Internet)</option>
-                  <option value="Transporte">🚗 Transporte / Gasolina</option>
-                  <option value="Salud">💊 Salud / Seguros</option>
-                  <option value="Educación">📚 Educación / Cursos</option>
-                  <option value="Ocio">🎬 Ocio / Salidas / Restaurantes</option>
-                  <option value="Suscripciones">📱 Suscripciones / Streaming</option>
-                  <option value="Deudas">💳 Pago de Tarjetas / Deudas</option>
-                  <option value="Otros">📦 Otros Gastos</option>
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label for="expenseName">Concepto / Nombre del Gasto</label>
+                  <input type="text" id="expenseName" placeholder="Ej. Alquiler de vivienda, Supermercado, Seguro de coche..." required>
+                </div>
+
+                <div class="form-group">
+                  <label for="expenseCategory">Categoría</label>
+                  <select id="expenseCategory" required>
+                    <option value="Vivienda">🏠 Vivienda / Hipoteca / Alquiler</option>
+                    <option value="Alimentación">🛒 Alimentación / Supermercado</option>
+                    <option value="Suministros">💡 Suministros (Luz, Agua, Gas)</option>
+                    <option value="Telecomunicaciones">📱 Teléfono / Internet / TV</option>
+                    <option value="Transporte">🚗 Transporte / Gasolina / Abonos</option>
+                    <option value="Seguros">🛡️ Seguros (Hogar, Salud, Auto)</option>
+                    <option value="Préstamos">💳 Préstamos / Deudas / Tarjetas</option>
+                    <option value="Educación">📚 Educación / Colegios / Cursos</option>
+                    <option value="Salud">💊 Salud / Cuidado Personal</option>
+                    <option value="Ocio">🎬 Ocio / Restauración / Viajes</option>
+                    <option value="Suscripciones">📦 Suscripciones / Streaming</option>
+                    <option value="Otros">🏷️ Otros Gastos</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="expenseAmount">Importe (<span class="dynamic-curr-symbol">S/</span>)</label>
+                  <div class="input-currency-wrapper">
+                    <span class="currency-symbol dynamic-curr-symbol">S/</span>
+                    <input type="number" id="expenseAmount" placeholder="Ej. 450" min="0.01" step="any" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="expenseFrequency">Frecuencia del Gasto</label>
+                  <select id="expenseFrequency" required>
+                    <option value="monthly" selected>Mensual (12/año)</option>
+                    <option value="weekly">Semanal (52/año)</option>
+                    <option value="biweekly">Quincenal (24/año)</option>
+                    <option value="bimonthly">Bimensual (6/año)</option>
+                    <option value="quarterly">Trimestral (4/año)</option>
+                    <option value="semiannual">Semestral (2/año)</option>
+                    <option value="annual">Anual (1/año)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" class="btn-primary">
+                <i class="fa-solid fa-plus"></i> Añadir Gasto al Presupuesto
+              </button>
+            </form>
+          </div>
+
+          <!-- 3. LISTADO DE GASTOS REGISTRADOS -->
+          <div class="card-box" id="secExpensesList">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-list-check"></i> Gastos Registrados (<span id="expenseCount">0</span>)</h3>
+              </div>
+              <div class="filter-controls">
+                <!-- Filtro por Tipo FPT -->
+                <select id="filterFptType" class="select-mini" aria-label="Filtrar por tipo de gasto">
+                  <option value="all">Todos los tipos</option>
+                  <option value="fixed_obligatory">Fijos Obligatorios</option>
+                  <option value="variable_necessary">Variables Necesarios</option>
+                  <option value="discretionary">Discrecionales</option>
+                </select>
+                <!-- Filtro por Categoría -->
+                <select id="filterCategory" class="select-mini" aria-label="Filtrar por categoría">
+                  <option value="all">Todas las categorías</option>
+                  <option value="Vivienda">Vivienda</option>
+                  <option value="Alimentación">Alimentación</option>
+                  <option value="Suministros">Suministros</option>
+                  <option value="Telecomunicaciones">Telecomunicaciones</option>
+                  <option value="Transporte">Transporte</option>
+                  <option value="Seguros">Seguros</option>
+                  <option value="Préstamos">Préstamos</option>
+                  <option value="Educación">Educación</option>
+                  <option value="Salud">Salud</option>
+                  <option value="Ocio">Ocio</option>
+                  <option value="Suscripciones">Suscripciones</option>
+                  <option value="Otros">Otros</option>
                 </select>
               </div>
             </div>
 
-            <div class="form-group">
-              <label>Tipo de Gasto (Para Regla 50/30/20):</label>
-              <div class="radio-cards">
-                <label class="radio-card">
-                  <input type="radio" name="expenseType" value="necesidad" checked>
-                  <div class="radio-content">
-                    <span class="radio-title"><i class="fa-solid fa-shield-halved"></i> Necesidad Básica (50%)</span>
-                    <span class="radio-desc">Alimentación, vivienda, servicios, deudas mínimas</span>
+            <div id="expenseListContainer" class="expense-list">
+              <!-- Renderizado dinámico -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Columna Derecha: Análisis de Salud Financiera y Gráficos -->
+        <section class="panel analytics-section">
+          <!-- Diagnóstico de Rigidez Financiera (Finanzas para Todos) -->
+          <div class="card-box highlight-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-shield-halved"></i> Indicador de Rigidez Financiera</h3>
+            </div>
+            <p class="section-description">
+              Finanzas para Todos recomienda que tus <strong>Gastos Fijos Obligatorios</strong> no superen el <strong>45% - 50%</strong> de tus ingresos netos para evitar la asfixia financiera ante emergencias.
+            </p>
+
+            <div class="rigidity-meter-box">
+              <div class="meter-header">
+                <div class="meter-title">
+                  <span class="fpt-indicator-dot dot-fixed"></span>
+                  <strong>Compromiso en Gastos Fijos:</strong>
+                </div>
+                <div class="meter-values">
+                  <span id="txtRigidityAmount">S/ 0.00</span>
+                  <strong id="pctRigidityVal">(0.0%)</strong>
+                </div>
+              </div>
+              <div class="progress-bar-bg">
+                <div id="barRigidity" class="progress-fill fill-fixed" style="width: 0%"></div>
+              </div>
+              <div id="msgRigidity" class="rule-hint">Ingresa tus datos para evaluar el riesgo financiero.</div>
+            </div>
+          </div>
+
+          <!-- Diagnóstico Distribución 50 / 30 / 20 -->
+          <div class="card-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-chart-pie"></i> Distribución Presupuestaria Recomendada</h3>
+            </div>
+            <div class="rule-meters">
+              <!-- Necesidades / Fijos + Variables esenciales (50%) -->
+              <div class="meter-item">
+                <div class="meter-header">
+                  <div class="meter-title">
+                    <span class="color-dot dot-needs"></span>
+                    <strong>Necesidades / Obligatorios + Variables (Máx. 50%)</strong>
                   </div>
-                </label>
-                <label class="radio-card">
-                  <input type="radio" name="expenseType" value="deseo">
-                  <div class="radio-content">
-                    <span class="radio-title"><i class="fa-solid fa-gamepad"></i> Deseo / Estilo de vida (30%)</span>
-                    <span class="radio-desc">Entretenimiento, salidas, compras personales</span>
+                  <div class="meter-values">
+                    <span id="txtNeedsAmount">$0.00</span> / <span id="txtNeedsIdeal">$0.00</span>
+                    <strong id="pctNeeds">(0%)</strong>
                   </div>
-                </label>
-              </div>
-            </div>
-
-            <button type="submit" class="btn-primary">
-              <i class="fa-solid fa-plus"></i> Añadir Gasto al Presupuesto
-            </button>
-          </form>
-        </div>
-
-        <!-- 3. Lista de Gastos Registrados -->
-        <div class="card-box">
-          <div class="card-box-header between">
-            <div>
-              <h3><i class="fa-solid fa-list-check"></i> Gastos Registrados (<span id="expenseCount">0</span>)</h3>
-            </div>
-            <div class="filter-controls">
-              <select id="filterCategory" class="select-mini">
-                <option value="all">Todas las categorías</option>
-                <option value="Vivienda">Vivienda</option>
-                <option value="Alimentación">Alimentación</option>
-                <option value="Servicios">Servicios</option>
-                <option value="Transporte">Transporte</option>
-                <option value="Salud">Salud</option>
-                <option value="Educación">Educación</option>
-                <option value="Ocio">Ocio</option>
-                <option value="Suscripciones">Suscripciones</option>
-                <option value="Deudas">Deudas</option>
-                <option value="Otros">Otros</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="expenseListContainer" class="expense-list">
-            <!-- Renderizado dinámico -->
-          </div>
-        </div>
-      </section>
-
-      <!-- Columna Derecha: Análisis Financiero y Regla 50/30/20 -->
-      <section class="panel analytics-section">
-        <!-- Diagnóstico de la Regla 50/30/20 -->
-        <div class="card-box">
-          <div class="card-box-header">
-            <h3><i class="fa-solid fa-chart-pie"></i> Diagnóstico Regla 50/30/20</h3>
-          </div>
-          <p class="section-description">
-            La fórmula dorada de las finanzas personales recomienda distribuir tus ingresos netos así:
-          </p>
-
-          <div class="rule-meters">
-            <!-- 50% Necesidades -->
-            <div class="meter-item">
-              <div class="meter-header">
-                <div class="meter-title">
-                  <span class="color-dot dot-needs"></span>
-                  <strong>Necesidades Básicas (Máx. 50%)</strong>
                 </div>
-                <div class="meter-values">
-                  <span id="txtNeedsAmount">$0.00</span> / <span id="txtNeedsIdeal">$0.00</span>
-                  <strong id="pctNeeds">(0%)</strong>
+                <div class="progress-bar-bg">
+                  <div id="barNeeds" class="progress-fill fill-needs" style="width: 0%"></div>
                 </div>
+                <div id="msgNeeds" class="rule-hint">Dentro del límite sugerido.</div>
               </div>
-              <div class="progress-bar-bg">
-                <div id="barNeeds" class="progress-fill fill-needs" style="width: 0%"></div>
-              </div>
-              <div id="msgNeeds" class="rule-hint">Dentro del límite sugerido.</div>
-            </div>
 
-            <!-- 30% Deseos -->
-            <div class="meter-item">
-              <div class="meter-header">
-                <div class="meter-title">
-                  <span class="color-dot dot-wants"></span>
-                  <strong>Deseos y Estilo de Vida (Máx. 30%)</strong>
+              <!-- Deseos / Discrecionales (30%) -->
+              <div class="meter-item">
+                <div class="meter-header">
+                  <div class="meter-title">
+                    <span class="color-dot dot-wants"></span>
+                    <strong>Discrecionales / Estilo de Vida (Máx. 30%)</strong>
+                  </div>
+                  <div class="meter-values">
+                    <span id="txtWantsAmount">$0.00</span> / <span id="txtWantsIdeal">$0.00</span>
+                    <strong id="pctWants">(0%)</strong>
+                  </div>
                 </div>
-                <div class="meter-values">
-                  <span id="txtWantsAmount">$0.00</span> / <span id="txtWantsIdeal">$0.00</span>
-                  <strong id="pctWants">(0%)</strong>
+                <div class="progress-bar-bg">
+                  <div id="barWants" class="progress-fill fill-wants" style="width: 0%"></div>
                 </div>
+                <div id="msgWants" class="rule-hint">Dentro del límite sugerido.</div>
               </div>
-              <div class="progress-bar-bg">
-                <div id="barWants" class="progress-fill fill-wants" style="width: 0%"></div>
-              </div>
-              <div id="msgWants" class="rule-hint">Dentro del límite sugerido.</div>
-            </div>
 
-            <!-- 20% Ahorro / Inversión -->
-            <div class="meter-item">
-              <div class="meter-header">
-                <div class="meter-title">
-                  <span class="color-dot dot-savings"></span>
-                  <strong>Ahorro e Inversión (Mín. 20%)</strong>
+              <!-- Ahorro e Inversión (20%) -->
+              <div class="meter-item">
+                <div class="meter-header">
+                  <div class="meter-title">
+                    <span class="color-dot dot-savings"></span>
+                    <strong>Ahorro e Inversión (Mín. 20%)</strong>
+                  </div>
+                  <div class="meter-values">
+                    <span id="txtSavingsAmount">$0.00</span> / <span id="txtSavingsIdeal">$0.00</span>
+                    <strong id="pctSavings">(0%)</strong>
+                  </div>
                 </div>
-                <div class="meter-values">
-                  <span id="txtSavingsAmount">$0.00</span> / <span id="txtSavingsIdeal">$0.00</span>
-                  <strong id="pctSavings">(0%)</strong>
+                <div class="progress-bar-bg">
+                  <div id="barSavings" class="progress-fill fill-savings" style="width: 0%"></div>
                 </div>
+                <div id="msgSavings" class="rule-hint">Ideal ahorrar al menos el 20%.</div>
               </div>
-              <div class="progress-bar-bg">
-                <div id="barSavings" class="progress-fill fill-savings" style="width: 0%"></div>
-              </div>
-              <div id="msgSavings" class="rule-hint">Ideal ahorrar al menos el 20%.</div>
             </div>
           </div>
-        </div>
 
-        <!-- Gráfico de Distribución de Gastos -->
-        <div class="card-box">
-          <div class="card-box-header">
-            <h3><i class="fa-solid fa-chart-donut"></i> Distribución de tus Gastos</h3>
-          </div>
-          <div class="chart-container">
-            <canvas id="expensesPieChart"></canvas>
-            <div id="chartPlaceholder" class="chart-empty-state">
-              <i class="fa-solid fa-chart-pie"></i>
-              <p>Agrega gastos para visualizar la distribución</p>
+          <!-- Gráfico de Distribución (Alternable entre Por Tipo FPT y Por Categoría) -->
+          <div class="card-box">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-chart-donut"></i> Visualización de Gastos</h3>
+              </div>
+              <div class="chart-toggle-group">
+                <button type="button" id="btnChartByType" class="btn-chart-tab active" data-chart-type="fptType">
+                  Por Tipo FPT
+                </button>
+                <button type="button" id="btnChartByCategory" class="btn-chart-tab" data-chart-type="category">
+                  Por Categoría
+                </button>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="expensesPieChart"></canvas>
+              <div id="chartPlaceholder" class="chart-empty-state">
+                <i class="fa-solid fa-chart-pie"></i>
+                <p>Agrega gastos para visualizar la distribución</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Consejos Financieros Dinámicos -->
-        <div class="card-box tips-box">
-          <div class="card-box-header">
-            <h3><i class="fa-solid fa-lightbulb"></i> Recomendación Financiera</h3>
+          <!-- Consejos Financieros Dinámicos de Finanzas para Todos -->
+          <div class="card-box tips-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-lightbulb"></i> Recomendaciones de Finanzas para Todos</h3>
+            </div>
+            <div id="dynamicAdvice" class="advice-content">
+              <p>Ingresa tus ingresos y gastos para obtener una evaluación personalizada de tu presupuesto.</p>
+            </div>
           </div>
-          <div id="dynamicAdvice" class="advice-content">
-            <p>Ingresa tu salario mensual y tus primeros gastos para obtener un diagnóstico personalizado de tu salud financiera.</p>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
+
+    <!-- CONTENEDOR VISTA 2: CALCULADORA DE INTERÉS COMPUESTO -->
+    <div id="tabContentCompound" class="tab-view-content" style="display: none;">
+      <!-- Hero / Introducción Educativa -->
+      <section class="ci-hero-banner">
+        <div class="ci-hero-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+        <div>
+          <h2>El Poder del Interés Compuesto</h2>
+          <p>Albert Einstein lo llamó la <em>octava maravilla del mundo</em>. Los intereses generados cada mes se reinvierten para generar nuevos intereses, multiplicando tu patrimonio con el paso del tiempo.</p>
+        </div>
+      </section>
+
+      <!-- Tarjetas de Resultados Clave del Interés Compuesto -->
+      <section class="summary-grid ci-summary-grid">
+        <div class="metric-card ci-total-card">
+          <div class="metric-icon"><i class="fa-solid fa-vault"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Monto Final Acumulado</span>
+            <h2 id="ciDispFinalTotal" class="metric-value">S/ 0.00</h2>
+            <small id="ciSubDispFinalTotal" class="metric-converted-sub">≈ $0.00 USD</small>
+            <span class="status-pill status-surplus" id="ciBadgeMultiplier">x0.0 de tu esfuerzo</span>
+          </div>
+        </div>
+
+        <div class="metric-card ci-deposit-card">
+          <div class="metric-icon"><i class="fa-solid fa-user-check"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Aportado por Ti (Capital Propio)</span>
+            <h2 id="ciDispTotalDeposited" class="metric-value">S/ 0.00</h2>
+            <small id="ciSubDispTotalDeposited" class="metric-converted-sub">≈ $0.00 USD</small>
+            <span class="metric-hint" id="ciPctDepositedHint">0% del capital final</span>
+          </div>
+        </div>
+
+        <div class="metric-card ci-interest-card">
+          <div class="metric-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Generado por Intereses</span>
+            <h2 id="ciDispTotalInterest" class="metric-value">S/ 0.00</h2>
+            <small id="ciSubDispTotalInterest" class="metric-converted-sub">≈ $0.00 USD</small>
+            <span class="metric-hint" id="ciPctInterestHint">0% fruto del interés</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Layout Interés Compuesto: Entradas a la izquierda, Gráfico y Evolución a la derecha -->
+      <div class="main-layout ci-layout">
+        <!-- Columna Izquierda: Parámetros y Sliders Interactivos -->
+        <section class="panel">
+          <div class="card-box">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-sliders"></i> Parámetros de la Inversión</h3>
+                <p class="box-desc">Ajusta las variables en tiempo real para ver cómo crece tu dinero.</p>
+              </div>
+              <button type="button" class="btn-toggle-form" id="ciBtnUseSurplus" title="Traer el saldo mensual de Mi Presupuesto a la aportación">
+                <i class="fa-solid fa-link"></i> Usar Sobrante del Presupuesto
+              </button>
+            </div>
+
+            <form id="compoundInterestForm" class="ci-form" onsubmit="return false;">
+              <!-- 1. Ahorro Inicial -->
+              <div class="form-group">
+                <div class="ci-slider-head">
+                  <label for="ciInitialDeposit">1. Ahorro / Capital Inicial:</label>
+                  <span class="ci-val-badge" id="ciBadgeInitial">S/ 1,000</span>
+                </div>
+                <div class="input-currency-wrapper">
+                  <span class="currency-symbol dynamic-curr-symbol">S/</span>
+                  <input type="number" id="ciInitialDeposit" min="0" step="50" value="1000">
+                </div>
+                <input type="range" id="ciInitialRange" min="0" max="50000" step="100" value="1000" class="slider-input ci-range">
+                <small class="helper-text">El dinero con el que arrancas tu cuenta o fondo hoy.</small>
+              </div>
+
+              <!-- 2. Aportación Mensual -->
+              <div class="form-group">
+                <div class="ci-slider-head">
+                  <label for="ciMonthlyContribution">2. Aportación Mensual Recurrente:</label>
+                  <span class="ci-val-badge" id="ciBadgeMonthly">S/ 250</span>
+                </div>
+                <div class="input-currency-wrapper">
+                  <span class="currency-symbol dynamic-curr-symbol">S/</span>
+                  <input type="number" id="ciMonthlyContribution" min="0" step="10" value="250">
+                </div>
+                <input type="range" id="ciMonthlyRange" min="0" max="10000" step="25" value="250" class="slider-input ci-range">
+                <small class="helper-text">Lo que ahorras o inviertes mes a mes sistemáticamente.</small>
+              </div>
+
+              <!-- 3. Años Ahorrados -->
+              <div class="form-group">
+                <div class="ci-slider-head">
+                  <label for="ciYears">3. Tiempo de Inversión (Años):</label>
+                  <span class="ci-val-badge ci-badge-accent" id="ciBadgeYears">10 años</span>
+                </div>
+                <div class="ci-input-unit-wrap">
+                  <input type="number" id="ciYears" min="1" max="50" step="1" value="10">
+                  <span class="ci-unit-suffix">años</span>
+                </div>
+                <input type="range" id="ciYearsRange" min="1" max="50" step="1" value="10" class="slider-input ci-range">
+                <small class="helper-text">El horizonte temporal es el factor más potente en el interés compuesto.</small>
+              </div>
+
+              <!-- 4. Rendimiento Anual Estimado (%) -->
+              <div class="form-group">
+                <div class="ci-slider-head">
+                  <label for="ciAnnualRate">4. Rendimiento Anual Estimado (%):</label>
+                  <span class="ci-val-badge ci-badge-rate" id="ciBadgeRate">8.0%</span>
+                </div>
+                <div class="ci-input-unit-wrap">
+                  <input type="number" id="ciAnnualRate" min="0.1" max="30" step="0.1" value="8.0">
+                  <span class="ci-unit-suffix">%</span>
+                </div>
+                <input type="range" id="ciRateRange" min="0.5" max="25" step="0.1" value="8.0" class="slider-input ci-range">
+                
+                <!-- Presets de rendimiento habituales -->
+                <div class="ci-rate-presets">
+                  <button type="button" class="btn-ci-preset" data-rate="4.5">Depósito / Bonos (4.5%)</button>
+                  <button type="button" class="btn-ci-preset active" data-rate="8.0">Fondo Indexado S&P500 (8.0%)</button>
+                  <button type="button" class="btn-ci-preset" data-rate="10.0">Renta Variable Global (10.0%)</button>
+                </div>
+                <small class="helper-text">Tasa de rentabilidad anual promedio esperada antes de impuestos.</small>
+              </div>
+            </form>
+          </div>
+
+          <!-- Consejos de inversión -->
+          <div class="card-box tips-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-lightbulb"></i> Claves del Inversor Sabio</h3>
+            </div>
+            <div class="advice-content" id="ciEducationalAdvice">
+              <p>El mayor aliado de tu dinero es el <strong>tiempo</strong>. Empezar hoy aportando pequeñas cantidades mensuales supera ampliamente a invertir tarde con sumas mayores.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Columna Derecha: Gráfico Interactivo y Tabla Anual Proyectada -->
+        <section class="panel">
+          <!-- Gráfico de Evolución del Crecimiento (Líneas / Área) -->
+          <div class="card-box">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-chart-area"></i> Proyección Temporal del Crecimiento</h3>
+                <p class="box-desc">Visualiza cómo los intereses (área verde) superan con los años a tu dinero aportado (área azul).</p>
+              </div>
+              <div class="chart-toggle-group">
+                <button type="button" id="btnCiChartStacked" class="btn-chart-tab active" data-ci-mode="stacked">
+                  Apilado
+                </button>
+                <button type="button" id="btnCiChartLine" class="btn-chart-tab" data-ci-mode="line">
+                  Líneas
+                </button>
+              </div>
+            </div>
+
+            <div class="chart-container ci-chart-container">
+              <canvas id="ciGrowthChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Tabla de Evolución Anual -->
+          <div class="card-box">
+            <div class="card-box-header between">
+              <div>
+                <h3><i class="fa-solid fa-table-list"></i> Evolución Año a Año</h3>
+              </div>
+              <button type="button" class="btn-toggle-form" id="ciBtnToggleTable">
+                <i class="fa-solid fa-chevron-down"></i> <span id="ciTxtToggleTable">Ver Detalle Completo</span>
+              </button>
+            </div>
+
+            <div class="ci-table-scroll-container" id="ciTableContainer">
+              <table class="ci-evolution-table">
+                <thead>
+                  <tr>
+                    <th>Año</th>
+                    <th class="text-right">Aportación Anual</th>
+                    <th class="text-right">Capital Aportado</th>
+                    <th class="text-right">Interés del Año</th>
+                    <th class="text-right">Intereses Totales</th>
+                    <th class="text-right">Saldo Final</th>
+                  </tr>
+                </thead>
+                <tbody id="ciTableBody">
+                  <!-- Renderizado dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- SECCIÓN IMPRESIBLE OCULTA EN PANTALLA, ACTIVA EN PRINT -->
+    <section class="printable-report" id="printReportSection">
+      <div class="print-header">
+        <div class="print-brand">
+          <h2>INFORME DE PRESUPUESTO PERSONAL</h2>
+          <p>Elaborado conforme al marco del Plan de Educación Financiera (CNMV / Banco de España)</p>
+        </div>
+        <div class="print-meta">
+          <div><strong>Fecha:</strong> <span id="printDate"></span></div>
+          <div><strong>Base de Cálculo:</strong> <span id="printPeriodMode">Mensual</span></div>
+          <div><strong>Moneda:</strong> <span id="printCurrency">Soles (S/)</span></div>
+        </div>
+      </div>
+
+      <div class="print-summary-table-wrap">
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th>Concepto Clave</th>
+              <th class="text-right">Monto Estimado</th>
+              <th class="text-right">% de Ingresos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Ingresos Totales</strong></td>
+              <td class="text-right" id="pTotalIncome">S/ 0.00</td>
+              <td class="text-right">100%</td>
+            </tr>
+            <tr>
+              <td>Gastos Fijos Obligatorios</td>
+              <td class="text-right" id="pFixedExpenses">S/ 0.00</td>
+              <td class="text-right" id="pFixedPct">0%</td>
+            </tr>
+            <tr>
+              <td>Gastos Variables Necesarios</td>
+              <td class="text-right" id="pVariableExpenses">S/ 0.00</td>
+              <td class="text-right" id="pVariablePct">0%</td>
+            </tr>
+            <tr>
+              <td>Gastos Discrecionales (Opcionales)</td>
+              <td class="text-right" id="pDiscretionaryExpenses">S/ 0.00</td>
+              <td class="text-right" id="pDiscretionaryPct">0%</td>
+            </tr>
+            <tr class="print-row-highlight">
+              <td><strong>Total Gastos</strong></td>
+              <td class="text-right" id="pTotalExpenses">S/ 0.00</td>
+              <td class="text-right" id="pTotalExpensesPct">0%</td>
+            </tr>
+            <tr>
+              <td>Reserva Fondo de Emergencia</td>
+              <td class="text-right" id="pEmergencyAmount">S/ 0.00</td>
+              <td class="text-right" id="pEmergencyPct">0%</td>
+            </tr>
+            <tr class="print-row-bold">
+              <td><strong>Remanente Final / Superávit</strong></td>
+              <td class="text-right" id="pRemainingBalance">S/ 0.00</td>
+              <td class="text-right" id="pRemainingPct">0%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-details-grid">
+        <div class="print-details-col">
+          <h4>Desglose de Ingresos Registrados</h4>
+          <div id="printIncomesList"></div>
+        </div>
+        <div class="print-details-col">
+          <h4>Desglose de Gastos Registrados</h4>
+          <div id="printExpensesList"></div>
+        </div>
+      </div>
+
+      <div class="print-footer-note">
+        <p><strong>Nota de salud financiera:</strong> Los gastos fijos no deben sobrepasar el 50% de los ingresos para garantizar liquidez y bienestar financiero en el hogar.</p>
+      </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
